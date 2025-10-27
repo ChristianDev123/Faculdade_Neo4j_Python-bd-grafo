@@ -1,33 +1,5 @@
 import pandas as pd
-from neo4j import GraphDatabase
-import itertools, string
-
-class Database:
-    def __init__(self, password, user, uri):
-        self.password = password
-        self.user = user
-        self.uri = uri
-        self.drive = GraphDatabase.driver(uri, auth=(user, password))
-        assert self.drive is not None, "[ERRO] Não foi possível estabelecer conexão!"
-    
-    def createDatabase(self, definitionCode:str = None):
-        assert definitionCode is not None, "Necessário definir o código para definir a criação das bases"
-        with self.drive.session() as session:
-            session.execute_write(lambda tx: tx.run("""
-                MATCH(n)
-                DETACH DELETE n
-            """))
-            session.execute_write(lambda tx: tx.run(definitionCode))
-    
-    def readDatabase(self, query):
-        response = None
-        with self.drive.session() as session:
-            try:
-                response = list(session.execute_write(lambda tx: tx.run(query)))
-            except:
-                print("[ERRO] Erro ao tentar rodar a query!")
-        return response
-
+from database import Database
 
 uri = 'neo4j://127.0.0.1:7687'
 user = 'neo4j'
@@ -59,7 +31,7 @@ def createRating(dictRating):
     movieId = dictRating['movieId']
     rating = dictRating['rating']
     timestamp = dictRating['timestamp']
-    moviename = f'film{userId}'
+    moviename = f'film{movieId}'
     username = f'user{userId}'
     
     return f"CREATE ({moviename})-[:WATCHED {{ userId: {userId}, movieId: {movieId}, rating: {rating}, timestamp: {timestamp}}}]->({username})"
@@ -72,9 +44,10 @@ command += list(map(lambda x: createRating(x), rating.to_dict(orient='records'))
 
 database.createDatabase('\n'.join(command))
 
-# [EXEMPLO] Seleção de Filmes assistidos por um usuário em específico que assistiu filmes de comédia
+# [EXEMPLO] Seleção de Filmes assistidos por um usuário em específico que assistiu filmes de comédia com nota maior ou igual à 4
 
 # MATCH r=(m:MOVIE)-[w:WATCHED]->(u:USER)
 # WHERE "Comedy" in m.genres
 # AND w.userId = 1
+# AND w.rating >= 4
 # return r
